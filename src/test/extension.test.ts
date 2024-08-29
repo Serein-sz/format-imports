@@ -1,20 +1,69 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-
-// import example from 'example.ts' -> 
-// import * as example from 'example.ts' -> 
-// import { assert } from 'example.ts' -> 
-// import { assert as newAssert } from 'example.ts' -> 
-// import { assert, vscode } from 'example.ts' -> import { assert } from 'example.ts'
-// import { assert, vscode } from 'example.ts' -> import { vscode } from 'example.ts'
-// import { assert as newAssert, vscode } from 'example.ts' -> import { assert as newAssert } from 'example.ts'
-// import { assert as newAssert, vscode } from 'example.ts' -> import { vscode } from 'example.ts'
+import { processingImportText } from '../utils';
 
 suite('Extension Test Suite', () => {
   vscode.window.showInformationMessage('Start all tests.');
-  test('Simple default import', () => {
-    const simpleDefaultImport = ``;
-    assert.strictEqual(simpleDefaultImport, simpleDefaultImport);
+  test('import-1', () => {
+    const example = "import {   getCenterPositionListConfig,   getRightComponentConfigListConfig } from '@/components/common/2D/buildConfigData'";
+    const allText = `import {   getCenterPositionListConfig,   getRightComponentConfigListConfig } from '@/components/common/2D/buildConfigData'
+    getCenterPositionListConfig()
+    getRightComponentConfigListConfig()
+`;
+    const result = "import { getCenterPositionListConfig, getRightComponentConfigListConfig } from '@/components/common/2D/buildConfigData'";
+    assert.strictEqual(result, processingImportText(example, allText));
+  });
+
+  test('import-2', () => {
+    const example = "import {   getCenterPositionListConfig,   getRightComponentConfigListConfig } from '@/components/common/2D/buildConfigData'";
+    const allText = `import {   getCenterPositionListConfig,   getRightComponentConfigListConfig } from '@/components/common/2D/buildConfigData'
+    getCenterPositionListConfig()
+`;
+    const result = "import { getCenterPositionListConfig } from '@/components/common/2D/buildConfigData'";
+    assert.strictEqual(result, processingImportText(example, allText));
+  });
+
+  test('import-3', () => {
+    const example = "import {   getCenterPositionListConfig,   getRightComponentConfigListConfig } from '@/components/common/2D/buildConfigData'";
+    const allText = `import {   getCenterPositionListConfig,   getRightComponentConfigListConfig } from '@/components/common/2D/buildConfigData'
+`;
+    const result = "";
+    assert.strictEqual(result, processingImportText(example, allText));
+  });
+
+  test('As import-1', () => {
+    const example = "import {   getCenterPositionListConfig,   getRightComponentConfigListConfig as get } from '@/components/common/2D/buildConfigData'";
+    const allText = `import {   getCenterPositionListConfig,   getRightComponentConfigListConfig as get } from '@/components/common/2D/buildConfigData'
+    getCenterPositionListConfig()
+`;
+    const result = "import { getCenterPositionListConfig } from '@/components/common/2D/buildConfigData'";
+    assert.strictEqual(result, processingImportText(example, allText));
+  });
+
+  test('As import-2', () => {
+    const example = "import {   getCenterPositionListConfig,   getRightComponentConfigListConfig as get } from '@/components/common/2D/buildConfigData'";
+    const allText = `import {   getCenterPositionListConfig,   getRightComponentConfigListConfig as get } from '@/components/common/2D/buildConfigData'
+    get()
+`;
+    const result = "import { getRightComponentConfigListConfig as get } from '@/components/common/2D/buildConfigData'";
+    assert.strictEqual(result, processingImportText(example, allText));
+  });
+
+  test('As import-3', () => {
+    const example = "import {   getCenterPositionListConfig,   getRightComponentConfigListConfig as get } from '@/components/common/2D/buildConfigData'";
+    const allText = `import {   getCenterPositionListConfig,   getRightComponentConfigListConfig as get } from '@/components/common/2D/buildConfigData'
+    getCenterPositionListConfig()
+`;
+    const result = "import { getCenterPositionListConfig, getRightComponentConfigListConfig as get } from '@/components/common/2D/buildConfigData'";
+    assert.strictEqual(result, processingImportText(example, allText));
+  });
+
+  test('As import-4', () => {
+    const example = "import {   getCenterPositionListConfig,   getRightComponentConfigListConfig as get } from '@/components/common/2D/buildConfigData'";
+    const allText = `import {   getCenterPositionListConfig,   getRightComponentConfigListConfig as get } from '@/components/common/2D/buildConfigData'
+`;
+    const result = "";
+    assert.strictEqual(result, processingImportText(example, allText));
   });
 
 });

@@ -17,35 +17,56 @@ export function readDependency(): string[] {
 }
 
 export function formatImports(textEditor: vscode.TextEditor, edit: vscode.TextEditorEdit) {
+
   const dependencies = readDependency();
-  const lineCount = textEditor.document.lineCount;
+
+  let [firstImportLine, importArray] = buildImportInfoArray(textEditor.document);
+
+  const regex = /\b\w+\b/g;
+  const allText = textEditor.document.getText().replace(/\/\/.*|\/\*[\s\S]*?\*\//g, '').match(regex)?.join(' ');
+
+  if (!allText) {
+    vscode.window.showErrorMessage('not match quote');
+  }
+
+  importArray.map(item => (item.text = processingImportText(item.text, allText!), item));
+
+  sortImportArray(importArray, dependencies);
+
+  for (let i = 0; i < importArray.length; i++) {
+    edit.delete(importArray[i].range);
+  }
+  for (let i = 0; i < importArray.length; i++) {
+    if (importArray[i].text === '') {
+      continue;
+    }
+    if (i > 0 && isDependency(importArray[i - 1].text, dependencies) && !isDependency(importArray[i].text, dependencies)) {
+      edit.insert(new vscode.Position(firstImportLine, 0), '\n');
+    }
+    edit.insert(new vscode.Position(firstImportLine, 0), importArray[i].text + '\n');
+  }
+}
+
+function buildImportInfoArray(document: vscode.TextDocument): [number, Import[]] {
+  const lineCount = document.lineCount;
   let firstImportLine = -1;
   const importArray: Import[] = [];
   for (let i = 0; i < lineCount; i++) {
-    // const line = textEditor.document.lineAt(i);
-    // const match = line.text.match(/^import\s+{(.*)}\s+from\s+['"](.*)['"]/);
-    // if (match) {
-    //   const [_, imports, moduleName] = match;
-    //   vscode.window.showInformationMessage('imports: ' + imports);
-    // }
-    const line = textEditor.document.lineAt(i);
+    const line = document.lineAt(i);
     const lineText = line.text;
-    // record first import line
     if (lineText.includes('import') && firstImportLine === -1) {
       firstImportLine = i;
     }
-
     if (lineText.includes('import') && lineText.includes('from')) {
       const range = new vscode.Range(new vscode.Position(i, 0), new vscode.Position(i + 1, 0));
       const importInfo = { text: line.text, range };
       importArray.push(importInfo);
     }
-
     if (lineText.includes('import') && !lineText.includes('from')) {
       const startPosition = new vscode.Position(i, 0);
       let text = line.text;
       for (let j = i + 1; j < lineCount; j++) {
-        const currentLineText = textEditor.document.lineAt(j).text;
+        const currentLineText = document.lineAt(j).text;
         text += currentLineText;
         if (currentLineText.includes('from')) {
           const endPosition = new vscode.Position(j + 1, 0);
@@ -57,6 +78,10 @@ export function formatImports(textEditor: vscode.TextEditor, edit: vscode.TextEd
       }
     }
   }
+  return [firstImportLine, importArray];
+}
+
+function sortImportArray(importArray: Import[], dependencies: string[]) {
   importArray.sort((a, b) => {
     if (!isDependency(a.text, dependencies) && isDependency(b.text, dependencies)) {
       return 1;
@@ -66,12 +91,37 @@ export function formatImports(textEditor: vscode.TextEditor, edit: vscode.TextEd
     }
     return 0;
   });
-  for (let i = 0; i < importArray.length; i++) {
-    edit.delete(importArray[i].range);
+}
+
+export function processingImportText(importText: string, allText: string): string {
+  const startIndex = importText.indexOf('{') !== -1 ? importText.indexOf('{') + 1 : importText.indexOf('import') + 6;
+  const endIndex = importText.indexOf('{') !== -1 ? importText.lastIndexOf('}') : importText.lastIndexOf('from');
+  const quotes = importText.slice(startIndex, endIndex).split(',')
+    .map(item => item.trim())
+    .map(processIncludeAsImportText)
+    .filter(item => {
+      let quote = item;
+      if (item.includes('as')) {
+        quote = item.split(' as ')[1];
+      }
+      return allText.indexOf(quote) !== allText.lastIndexOf(quote);
+    });
+  if (quotes.length === 0) {
+    return '';
   }
-  for (let i = 0; i < importArray.length; i++) {
-    edit.insert(new vscode.Position(firstImportLine, 0), importArray[i].text + '\n');
+  const fromPath = importText.slice(importText.lastIndexOf('from') + 4).trim();
+  if (importText.indexOf('{') !== -1) {
+    return `import { ${quotes.join(', ')} } from ${fromPath}`;
+  } else {
+    return `import ${quotes.join(', ')} from ${fromPath}`;
   }
+}
+
+function processIncludeAsImportText(importText: string): string {
+  if (!importText.includes('as')) {
+    return importText;
+  }
+  return `${importText.split('as')[0].trim()} as ${importText.split('as')[1].trim()}`;
 }
 
 function isDependency(importText: string, dependencies: string[]) {
