@@ -4,6 +4,10 @@
   "description": "",
   "version": "0.0.1",
   "publisher": "sereinwq",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Serein-sz/format-imports"
+  },
   "engines": {
     "vscode": "^1.92.0"
   },
@@ -16,13 +20,13 @@
     "commands": [
       {
         "command": "format-imports.format",
-        "title": "Hello World"
+        "title": "format imports"
       }
     ],
     "keybindings": [
       {
         "command": "format-imports.format",
-        "key": "Alt+Shift+o",
+        "key": "Alt+Ctrl+o",
         "mac": "Cmd+Shift+o",
         "when": "editorTextFocus"
       }
