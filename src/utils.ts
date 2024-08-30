@@ -13,7 +13,7 @@ export function readDependency(): string[] {
   const packageJsonPath = path.join(workspaceFolders[0].uri.fsPath, 'package.json');
   const data = readFileSync(packageJsonPath, 'utf8');
   const json = JSON.parse(data);
-  return [...Object.keys(json.dependencies), ...Object.keys(json.devDependencies)];
+  return [...Object.keys(json.dependencies ? json.dependencies : {}), ...Object.keys(json.devDependencies ? json.devDependencies : {})];
 }
 export function buildAllText(ranges: vscode.Range[], document: vscode.TextDocument) {
   let result = '';
