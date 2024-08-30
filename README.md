@@ -14,6 +14,6 @@ import { extensionFunc } from extension
 
 ## shortcuts
 
-windows : `Alt + Shift + o`
+windows : `Ctrl + Alt + o`
 
 macos : `Cmd + Shift + o`
