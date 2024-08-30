@@ -22,9 +22,10 @@ export function formatImports(textEditor: vscode.TextEditor, edit: vscode.TextEd
 
   let [firstImportLine, importArray] = buildImportInfoArray(textEditor.document);
 
+  // const allText = buildAllText(importArray.map(item => item.range), textEditor.document);
   const regex = /\b\w+\b/g;
-  const allText = textEditor.document.getText().replace(/\/\/.*|\/\*[\s\S]*?\*\//g, '').match(regex)?.join(' ');
-
+  // const allText = textEditor.document.getText().replace(/\/\/.*|\/\*[\s\S]*?\*\//g, '').match(regex)?.join(' ');
+  const allText = buildAllText(importArray.map(item => item.range), textEditor.document).replace(/\/\/.*|\/\*[\s\S]*?\*\//g, '').match(regex)?.join(' ');
   if (!allText) {
     vscode.window.showErrorMessage('not match quote');
   }
@@ -47,7 +48,27 @@ export function formatImports(textEditor: vscode.TextEditor, edit: vscode.TextEd
   }
 }
 
-function buildImportInfoArray(document: vscode.TextDocument): [number, Import[]] {
+export function buildAllText(ranges: vscode.Range[], document: vscode.TextDocument) {
+  let result = '';
+  let left = new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 0)),
+    right = new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 0));
+  for (let i = 0; i < ranges.length; i++) {
+    const range = ranges[i];
+    right = range;
+    if (i === ranges.length - 1) {
+      left = right;
+      const endLines = document.lineCount - 1;
+      const endLine = document.lineAt(endLines).text;
+      right = new vscode.Range(new vscode.Position(endLines, endLine.length), new vscode.Position(endLines, endLine.length));
+    }
+    const textRange = new vscode.Range(left.end, right.start);
+    result += document.getText(textRange);
+    left = range;
+  }
+  return result;
+}
+
+export function buildImportInfoArray(document: vscode.TextDocument): [number, Import[]] {
   const lineCount = document.lineCount;
   let firstImportLine = -1;
   const importArray: Import[] = [];
@@ -102,9 +123,10 @@ export function processingImportText(importText: string, allText: string): strin
     .filter(item => {
       let quote = item;
       if (item.includes('as')) {
-        quote = item.split(' as ')[1];
+        quote = item.split('as')[1].trim();
       }
-      return allText.indexOf(quote) !== allText.lastIndexOf(quote);
+      const regex = new RegExp(`(?<!\\.)\\b${quote}\\b[^a-zA-Z]*`);
+      return regex.test(allText);
     });
   if (quotes.length === 0) {
     return '';
