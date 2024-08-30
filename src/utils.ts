@@ -15,39 +15,6 @@ export function readDependency(): string[] {
   const json = JSON.parse(data);
   return [...Object.keys(json.dependencies), ...Object.keys(json.devDependencies)];
 }
-
-export function formatImports(textEditor: vscode.TextEditor, edit: vscode.TextEditorEdit) {
-
-  const dependencies = readDependency();
-
-  let [firstImportLine, importArray] = buildImportInfoArray(textEditor.document);
-
-  // const allText = buildAllText(importArray.map(item => item.range), textEditor.document);
-  const regex = /\b\w+\b/g;
-  // const allText = textEditor.document.getText().replace(/\/\/.*|\/\*[\s\S]*?\*\//g, '').match(regex)?.join(' ');
-  const allText = buildAllText(importArray.map(item => item.range), textEditor.document).replace(/\/\/.*|\/\*[\s\S]*?\*\//g, '').match(regex)?.join(' ');
-  if (!allText) {
-    vscode.window.showErrorMessage('not match quote');
-  }
-
-  importArray.map(item => (item.text = processingImportText(item.text, allText!), item));
-
-  sortImportArray(importArray, dependencies);
-
-  for (let i = 0; i < importArray.length; i++) {
-    edit.delete(importArray[i].range);
-  }
-  for (let i = 0; i < importArray.length; i++) {
-    if (importArray[i].text === '') {
-      continue;
-    }
-    if (i > 0 && isDependency(importArray[i - 1].text, dependencies) && !isDependency(importArray[i].text, dependencies)) {
-      edit.insert(new vscode.Position(firstImportLine, 0), '\n');
-    }
-    edit.insert(new vscode.Position(firstImportLine, 0), importArray[i].text + '\n');
-  }
-}
-
 export function buildAllText(ranges: vscode.Range[], document: vscode.TextDocument) {
   let result = '';
   let left = new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 0)),
@@ -102,7 +69,7 @@ export function buildImportInfoArray(document: vscode.TextDocument): [number, Im
   return [firstImportLine, importArray];
 }
 
-function sortImportArray(importArray: Import[], dependencies: string[]) {
+export function sortImportArray(importArray: Import[], dependencies: string[]) {
   importArray.sort((a, b) => {
     if (!isDependency(a.text, dependencies) && isDependency(b.text, dependencies)) {
       return 1;
@@ -139,13 +106,28 @@ export function processingImportText(importText: string, allText: string): strin
   }
 }
 
-function processIncludeAsImportText(importText: string): string {
+export function processIncludeAsImportText(importText: string): string {
   if (!importText.includes('as')) {
     return importText;
   }
   return `${importText.split('as')[0].trim()} as ${importText.split('as')[1].trim()}`;
 }
 
-function isDependency(importText: string, dependencies: string[]) {
+export function isDependency(importText: string, dependencies: string[]) {
   return dependencies.some(dependency => importText.includes(dependency));
+}
+
+export function removeAndInsertImports(edit: vscode.TextEditorEdit, firstImportLine: number, importArray: Import[], dependencies: string[]) {
+  for (let i = 0; i < importArray.length; i++) {
+    edit.delete(importArray[i].range);
+  }
+  for (let i = 0; i < importArray.length; i++) {
+    if (importArray[i].text === '') {
+      continue;
+    }
+    if (i > 0 && isDependency(importArray[i - 1].text, dependencies) && !isDependency(importArray[i].text, dependencies)) {
+      edit.insert(new vscode.Position(firstImportLine, 0), '\n');
+    }
+    edit.insert(new vscode.Position(firstImportLine, 0), importArray[i].text + '\n');
+  }
 }
